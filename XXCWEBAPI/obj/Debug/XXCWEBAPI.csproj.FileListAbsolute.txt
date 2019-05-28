@@ -39,3 +39,4 @@ D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\bin\zh-Hans\System.Web.WebPages.Deployment.re
 D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\bin\zh-Hans\System.Web.WebPages.Razor.resources.dll
 D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.dll
 D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.pdb
+D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\bin\BouncyCastle.Crypto.dll

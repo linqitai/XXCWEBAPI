@@ -87,20 +87,20 @@ namespace XXCWEBAPI.Models
             set { _VExpiryDate = value; }
             get { return _VExpiryDate; }
         }
-        private Byte[] _VCertificatePhoto;
+        private string _VCertificatePhoto;
         /// <summary>
         /// 
         /// </summary>
-        public Byte[] VCertificatePhoto
+        public string VCertificatePhoto
         {
             set { _VCertificatePhoto = value; }
             get { return _VCertificatePhoto; }
         }
-        private Byte[] _VLocalePhoto;
+        private string _VLocalePhoto;
         /// <summary>
         /// 
         /// </summary>
-        public Byte[] VLocalePhoto
+        public string VLocalePhoto
         {
             set { _VLocalePhoto = value; }
             get { return _VLocalePhoto; }
@@ -266,6 +266,15 @@ namespace XXCWEBAPI.Models
         {
             set { _VRemark = value; }
             get { return _VRemark; }
+        }
+        private string _VMD5Ciphertext;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string VMD5Ciphertext
+        {
+            set { _VMD5Ciphertext = value; }
+            get { return _VMD5Ciphertext; }
         }
     }
 }
