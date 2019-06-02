@@ -10,7 +10,8 @@ namespace XXCWEBAPI.Utils
     public static class AESHelper
     {
         //private static string skey = "$IロQ＇I`A^";//12345678876543211234567887654abc
-        private static string skey = "12345`78876543.1123456788`654abc";//12345678876543211234567887654abc
+        //private static string skey = "12345`78876543.1123456788`654abc";//12345678876543211234567887654abc
+        private static string skey = "abc`efga.cdef`12";
         /// <summary>
         ///  AES 加密
         /// </summary>

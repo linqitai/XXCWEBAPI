@@ -10,18 +10,26 @@ namespace XXCWEBAPI.Utils
     public static class DataHelper
     {
         /// <summary>
-        /// 判断该字段是否为空，空则返回--
+        /// 判断该字段是否为空，空则返回""
         /// </summary>
-        /// <param name="dt"></param>
+        /// <param name="str">str</param>
+        /// <param name="dealSpace">是否要把空格转换成+号</param>
         /// <returns></returns>
-        public static string IsNullReturnLine(string str)
+        public static string IsNullReturnLine(string str,bool dealSpace=false)
         {
             if (string.IsNullOrEmpty(str))
             {
                 return "";
             }
             else {
-                return str.Trim();   
+                if (dealSpace) {
+                    return str.Trim().Replace(" ", "+");
+                }
+                else
+                {
+                    return str.Trim();   
+                }
+                
             }
         }
         //private static string skey = "$IロQ＇I`A^";//12345`78876543.1123456788`654abc

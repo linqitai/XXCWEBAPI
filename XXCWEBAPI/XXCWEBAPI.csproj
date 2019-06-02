@@ -136,12 +136,20 @@
     <Compile Include="Areas\HelpPage\SampleGeneration\SampleDirection.cs" />
     <Compile Include="Areas\HelpPage\SampleGeneration\TextSample.cs" />
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
+    <Compile Include="Controllers\CourtInfController.cs" />
+    <Compile Include="Controllers\UserInfController.cs" />
+    <Compile Include="Controllers\LawyerInfController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
+    <Compile Include="Controllers\BlacklistInfController.cs" />
     <Compile Include="Controllers\VisitorAccessInfController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\BlacklistInf.cs" />
+    <Compile Include="Models\CourtInf.cs" />
+    <Compile Include="Models\LawyerInf.cs" />
+    <Compile Include="Models\UserInf.cs" />
     <Compile Include="Models\VisitorAccessInf.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\AESHelper.cs" />
