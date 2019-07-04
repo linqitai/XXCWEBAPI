@@ -168,5 +168,14 @@ namespace XXCWEBAPI.Models
             set { _BMD5Ciphertext = value; }
             get { return _BMD5Ciphertext; }
         }
+        private string _token;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Token
+        {
+            set { _token = value; }
+            get { return _token; }
+        }
     }
 }

@@ -146,5 +146,14 @@ namespace XXCWEBAPI.Models
             set { _LMD5Ciphertext = value; }
             get { return _LMD5Ciphertext; }
         }
+        private string _token;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Token
+        {
+            set { _token = value; }
+            get { return _token; }
+        }
     }
 }

@@ -118,32 +118,57 @@ namespace XXCWEBAPI.Controllers
             string md5P = MD5Helper._md5(p);
             if (md5Ciphertext == md5P)
             {
-                string sql = "sp_addLawyerInf";
-                name = RSAHelper.DecryptWithPrivateKey(privateKey,name);
-                identityNumber = RSAHelper.DecryptWithPrivateKey(privateKey,identityNumber);
-                SqlParameter[] pms = new SqlParameter[]{
-                    new SqlParameter("@LName",SqlDbType.NVarChar){Value=name},
-                    new SqlParameter("@LSex",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LSex)},
-                    new SqlParameter("@LPhoto",SqlDbType.NVarChar){Value=photo},
-                    new SqlParameter("@LIdentityNumber",SqlDbType.NVarChar){Value=identityNumber},
-                    new SqlParameter("@LActuator",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LActuator)},
-                    new SqlParameter("@LPCType",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LPCType)},
-                    new SqlParameter("@LPCNumber",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LPCNumber)},
-                    new SqlParameter("@LQualifityNumber",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LQualifityNumber)},
-                    new SqlParameter("@LIssuingAuthority",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LIssuingAuthority)},
-                    new SqlParameter("@LIssuingDate",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LIssuingDate)},
-                    new SqlParameter("@LInTime",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LInTime)},
-                    new SqlParameter("@LFromCourtId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LFromCourtId)},
-                    new SqlParameter("@LRemark",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LRemark)}
+                string sql1 = "select count(*) from T_LawyerInf where LIdentityNumber=@LIdentityNumber";
+                SqlParameter[] pms1 = new SqlParameter[]{
+                    new SqlParameter("@LIdentityNumber",SqlDbType.NVarChar){Value = RSAHelper.DecryptWithPrivateKey(privateKey,identityNumber)}
                 };
                 try
                 {
-                    int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.StoredProcedure, pms);
-                    return ConvertHelper.IntToJson(result);
+                    object c = SQLHelper.ExecuteScalar(sql1, System.Data.CommandType.Text, pms1);
+                    if (Convert.ToInt32(c) > 0)
+                    {
+                        return ConvertHelper.resultJson(0, "数据库中已存在此身份证号，请勿重复添加！");
+                    }
+                    else
+                    {
+                        string sql = "sp_addLawyerInf";
+                        name = RSAHelper.DecryptWithPrivateKey(privateKey, name);
+                        identityNumber = RSAHelper.DecryptWithPrivateKey(privateKey, identityNumber);
+                        SqlParameter[] pms = new SqlParameter[]{
+                            new SqlParameter("@LName",SqlDbType.NVarChar){Value=name},
+                            new SqlParameter("@LSex",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LSex)},
+                            new SqlParameter("@LPhoto",SqlDbType.NVarChar){Value=photo},
+                            new SqlParameter("@LIdentityNumber",SqlDbType.NVarChar){Value=identityNumber},
+                            new SqlParameter("@LActuator",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LActuator)},
+                            new SqlParameter("@LPCType",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LPCType)},
+                            new SqlParameter("@LPCNumber",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LPCNumber)},
+                            new SqlParameter("@LQualifityNumber",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LQualifityNumber)},
+                            new SqlParameter("@LIssuingAuthority",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LIssuingAuthority)},
+                            new SqlParameter("@LIssuingDate",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LIssuingDate)},
+                            new SqlParameter("@LInTime",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LInTime)},
+                            new SqlParameter("@LFromCourtId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LFromCourtId)},
+                            new SqlParameter("@LRemark",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LRemark)}
+                        };
+                        try
+                        {
+                            int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.StoredProcedure, pms);
+                            return ConvertHelper.IntToJson(result);
+                        }
+                        catch (Exception e)
+                        {
+                            //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                            var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                            {
+                                Content = new StringContent(e.ToString()),
+                                ReasonPhrase = "error"
+                            };
+                            throw new HttpResponseException(resp);
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
-                    //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                    //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
                     var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
                     {
                         Content = new StringContent(e.ToString()),
@@ -160,46 +185,48 @@ namespace XXCWEBAPI.Controllers
         [HttpPost, Route("addInf4Web")]
         public string AddInf4Web(LawyerInf v)
         {
-            string wramStr = "";
-            if (v.LName == "" || v.LName == null)
+            if (v.Token == DataHelper.getToken())
             {
-                wramStr = "姓名不能为空";
-                return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
-            }
-            if (v.LIdentityNumber == "" || v.LIdentityNumber == null)
-            {
-                wramStr = "身份证号不能为空";
-                return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
-            }
+                string wramStr = "";
+                if (v.LName == "" || v.LName == null)
+                {
+                    wramStr = "姓名不能为空";
+                    return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
+                }
+                if (v.LIdentityNumber == "" || v.LIdentityNumber == null)
+                {
+                    wramStr = "身份证号不能为空";
+                    return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
+                }
 
-            //数据在传输过程中，密文中的“+”号会被替换合成“ ”空格号，把它还原回来
-            string name = v.LName.Replace(" ", "+");
-            string identityNumber = v.LIdentityNumber.Replace(" ", "+");
+                //数据在传输过程中，密文中的“+”号会被替换合成“ ”空格号，把它还原回来
+                string name = v.LName.Replace(" ", "+");
+                string identityNumber = v.LIdentityNumber.Replace(" ", "+");
 
-            string p = "";
-            p += "LName=" + name;
-            p += "&LSex=" + v.LSex;
-            p += "&LPhoto=" + DataHelper.IsNullReturnLine(v.LPhoto, true);
-            p += "&LIdentityNumber=" + identityNumber;
-            p += "&LActuator=" + v.LActuator;
-            p += "&LPCType=" + v.LPCType;
-            p += "&LPCNumber=" + v.LPCNumber;
-            p += "&LQualifityNumber=" + v.LQualifityNumber;
-            p += "&LIssuingAuthority=" + v.LIssuingAuthority;
-            p += "&LIssuingDate=" + v.LIssuingDate;
-            p += "&LInTime=" + v.LInTime;
-            p += "&LFromCourtId=" + v.LFromCourtId;
-            p += "&LRemark=" + v.LRemark;
+                string p = "";
+                p += "LName=" + name;
+                p += "&LSex=" + v.LSex;
+                p += "&LPhoto=" + DataHelper.IsNullReturnLine(v.LPhoto, true);
+                p += "&LIdentityNumber=" + identityNumber;
+                p += "&LActuator=" + v.LActuator;
+                p += "&LPCType=" + v.LPCType;
+                p += "&LPCNumber=" + v.LPCNumber;
+                p += "&LQualifityNumber=" + v.LQualifityNumber;
+                p += "&LIssuingAuthority=" + v.LIssuingAuthority;
+                p += "&LIssuingDate=" + v.LIssuingDate;
+                p += "&LInTime=" + v.LInTime;
+                p += "&LFromCourtId=" + v.LFromCourtId;
+                p += "&LRemark=" + v.LRemark;
 
-            string md5Ciphertext = v.LMD5Ciphertext;//对方传过来的所有字段的MD5密文
-            //把传过来的信息再次MD5加密，和所有字段的MD5密文进行比对，保证数据在传输过程中没被修改才允许添加到数据库
-            string md5P = MD5Helper._md5(p);
-            if (md5Ciphertext == md5P)
-            {
-                string sql = "sp_addLawyerInf";
-                name = AESHelper.AesDecrypt(name);
-                identityNumber = AESHelper.AesDecrypt(identityNumber);
-                SqlParameter[] pms = new SqlParameter[]{
+                string md5Ciphertext = v.LMD5Ciphertext;//对方传过来的所有字段的MD5密文
+                //把传过来的信息再次MD5加密，和所有字段的MD5密文进行比对，保证数据在传输过程中没被修改才允许添加到数据库
+                string md5P = MD5Helper._md5(p);
+                if (md5Ciphertext == md5P)
+                {
+                    string sql = "sp_addLawyerInf";
+                    name = AESHelper.AesDecrypt(name);
+                    identityNumber = AESHelper.AesDecrypt(identityNumber);
+                    SqlParameter[] pms = new SqlParameter[]{
                     new SqlParameter("@LName",SqlDbType.NVarChar){Value=name},
                     new SqlParameter("@LSex",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LSex)},
                     new SqlParameter("@LPhoto",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LPhoto)},
@@ -214,70 +241,78 @@ namespace XXCWEBAPI.Controllers
                     new SqlParameter("@LFromCourtId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LFromCourtId)},
                     new SqlParameter("@LRemark",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LRemark)}
                 };
-                try
-                {
-                    int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.StoredProcedure, pms);
-                    return ConvertHelper.IntToJson(result);
-                }
-                catch (Exception e)
-                {
-                    //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
-                    var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    try
                     {
-                        Content = new StringContent(e.ToString()),
-                        ReasonPhrase = "error"
-                    };
-                    throw new HttpResponseException(resp);
+                        int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.StoredProcedure, pms);
+                        return ConvertHelper.IntToJson(result);
+                    }
+                    catch (Exception e)
+                    {
+                        //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                        var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                        {
+                            Content = new StringContent(e.ToString()),
+                            ReasonPhrase = "error"
+                        };
+                        throw new HttpResponseException(resp);
+                    }
+                }
+                else
+                {
+                    return ConvertHelper.resultJson(0, "数据传输过程中被篡改！");
                 }
             }
             else
             {
-                return ConvertHelper.resultJson(0, "数据传输过程中被篡改");
+                return ConvertHelper.resultJson(101, "权限受限！");
             }
         }
         [HttpPost, Route("editInf")]
         public string EditInf(LawyerInf v)
         {
-            string wramStr = "";
-            if (v.LName == "" || v.LName == null)
+            if (v.Token == DataHelper.getToken())
             {
-                wramStr = "姓名不能为空";
-                return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
-            }
-            else if (v.LIdentityNumber == "" || v.LIdentityNumber == null)
-            {
-                wramStr = "身份证号不能为空";
-                return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
-            }
-            //数据在传输过程中，密文中的“+”号会被替换合成“ ”空格号，把它还原回来
-            string name = v.LName.Replace(" ", "+");
-            string identityNumber = v.LIdentityNumber.Replace(" ", "+");
+                string wramStr = "";
+                if (v.LName == "" || v.LName == null)
+                {
+                    wramStr = "姓名不能为空";
+                    return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
+                }
+                else if (v.LIdentityNumber == "" || v.LIdentityNumber == null)
+                {
+                    wramStr = "身份证号不能为空";
+                    return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
+                }
+                //数据在传输过程中，密文中的“+”号会被替换合成“ ”空格号，把它还原回来
+                string name = v.LName.Replace(" ", "+");
+                string identityNumber = v.LIdentityNumber.Replace(" ", "+");
 
-            string p = "";
-            p += "LName=" + name;
-            p += "&LSex=" + v.LSex;
-            p += "&LPhoto=" + DataHelper.IsNullReturnLine(v.LPhoto, true);
-            p += "&LIdentityNumber=" + identityNumber;
-            p += "&LActuator=" + v.LActuator;
-            p += "&LPCType=" + v.LPCType;
-            p += "&LPCNumber=" + v.LPCNumber;
-            p += "&LQualifityNumber=" + v.LQualifityNumber;
-            p += "&LIssuingAuthority=" + v.LIssuingAuthority;
-            p += "&LIssuingDate=" + v.LIssuingDate;
-            p += "&LInTime=" + v.LInTime;
-            p += "&LFromCourtId=" + v.LFromCourtId;
-            p += "&LRemark=" + v.LRemark;
+                string p = "";
+                p += "LName=" + name;
+                p += "&LSex=" + v.LSex;
+                p += "&LPhoto=" + DataHelper.IsNullReturnLine(v.LPhoto, true);
+                p += "&LIdentityNumber=" + identityNumber;
+                p += "&LActuator=" + v.LActuator;
+                p += "&LPCType=" + v.LPCType;
+                p += "&LPCNumber=" + v.LPCNumber;
+                p += "&LQualifityNumber=" + v.LQualifityNumber;
+                p += "&LIssuingAuthority=" + v.LIssuingAuthority;
+                p += "&LIssuingDate=" + v.LIssuingDate;
+                p += "&LInTime=" + v.LInTime;
+                p += "&LFromCourtId=" + v.LFromCourtId;
+                p += "&LRemark=" + v.LRemark;
 
-            string md5Ciphertext = v.LMD5Ciphertext;//对方传过来的所有字段的MD5密文
-            //把传过来的信息再次MD5加密，和所有字段的MD5密文进行比对，保证数据在传输过程中没被修改才允许添加到数据库
-            string md5P = MD5Helper._md5(p);
-            if (md5Ciphertext == md5P) {
-                //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
-                string sql = "update T_LawyerInf set LName=@LName,LSex=@LSex,LPhoto=@LPhoto,LIdentityNumber=@LIdentityNumber,LActuator=@LActuator,";
-                sql += "LPCType=@LPCType,LPCNumber=@LPCNumber,LQualifityNumber=@LQualifityNumber,LIssuingAuthority=@LIssuingAuthority,";
-                sql += "LIssuingDate=@LIssuingDate,LInTime=@LInTime,LFromCourtId=@LFromCourtId,LRemark=@LRemark";
-                sql += " where LId=@LId";
-                SqlParameter[] pms = new SqlParameter[]{
+                string md5Ciphertext = v.LMD5Ciphertext;//对方传过来的所有字段的MD5密文
+                //把传过来的信息再次MD5加密，和所有字段的MD5密文进行比对，保证数据在传输过程中没被修改才允许添加到数据库
+                string md5P = MD5Helper._md5(p);
+                if (md5Ciphertext == md5P)
+                {
+                    //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
+                    string sql = "update T_LawyerInf set LName=@LName,LSex=@LSex,LPhoto=@LPhoto,LIdentityNumber=@LIdentityNumber,LActuator=@LActuator,";
+                    sql += "LPCType=@LPCType,LPCNumber=@LPCNumber,LQualifityNumber=@LQualifityNumber,LIssuingAuthority=@LIssuingAuthority,";
+                    sql += "LIssuingDate=@LIssuingDate,LInTime=@LInTime,LFromCourtId=@LFromCourtId,LRemark=@LRemark";
+                    sql += " where LId=@LId";
+                    SqlParameter[] pms = new SqlParameter[]{
                     new SqlParameter("@LName",SqlDbType.NVarChar){Value=AESHelper.AesDecrypt(name)},
                     new SqlParameter("@LSex",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LSex)},
                     new SqlParameter("@LPhoto",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LPhoto)},
@@ -293,24 +328,28 @@ namespace XXCWEBAPI.Controllers
                     new SqlParameter("@LRemark",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.LRemark)},
                     new SqlParameter("@LId",SqlDbType.Int){Value=v.LId}
                 };
-                try
-                {
-                    int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
-                    return ConvertHelper.IntToJson(result);
-                }
-                catch (Exception e)
-                {
-                    //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
-                    var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    try
                     {
-                        Content = new StringContent(e.ToString()),
-                        ReasonPhrase = "error"
-                    };
-                    throw new HttpResponseException(resp);
-                } 
+                        int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
+                        return ConvertHelper.IntToJson(result);
+                    }
+                    catch (Exception e)
+                    {
+                        //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
+                        var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                        {
+                            Content = new StringContent(e.ToString()),
+                            ReasonPhrase = "error"
+                        };
+                        throw new HttpResponseException(resp);
+                    }
+                }
+                return ConvertHelper.resultJson(0, "出错了！");
             }
-            wramStr = "出错了！";
-            return "{\"code\":0,\"msg\":\"" + wramStr + "\"}";
+            else
+            {
+                return ConvertHelper.resultJson(101, "权限受限！");
+            }
         }
         [HttpGet, Route("haveThisModel")]
         public string HaveThisModel(string LIdentityNumber)
@@ -379,26 +418,33 @@ namespace XXCWEBAPI.Controllers
         [HttpPost, Route("deleteInfById")]
         public string DeleteInfById(LawyerInf B)
         {
-            //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
-            string sql = "delete from T_LawyerInf where LId=@LId";
-            SqlParameter[] pms = new SqlParameter[]{
-                new SqlParameter("@LId",SqlDbType.Int){Value=B.LId}
-            };
-            try
+            if (B.Token + "1" == DataHelper.getToken())
             {
-                int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
-                return ConvertHelper.IntToJson(result);
-            }
-            catch (Exception e)
-            {
-                //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
-                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-                {
-                    Content = new StringContent(e.ToString()),
-                    ReasonPhrase = "error"
+                //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
+                string sql = "delete from T_LawyerInf where LId=@LId";
+                SqlParameter[] pms = new SqlParameter[]{
+                    new SqlParameter("@LId",SqlDbType.Int){Value=B.LId}
                 };
-                throw new HttpResponseException(resp);
+                try
+                {
+                    int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
+                    return ConvertHelper.IntToJson(result);
+                }
+                catch (Exception e)
+                {
+                    //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
+                    var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    {
+                        Content = new StringContent(e.ToString()),
+                        ReasonPhrase = "error"
+                    };
+                    throw new HttpResponseException(resp);
+                }
             }
+            else {
+                return ConvertHelper.resultJson(101, "权限受限！");
+            }
+            
         }
     }
 }

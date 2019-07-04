@@ -92,7 +92,116 @@ namespace XXCWEBAPI.Controllers
                 throw new HttpResponseException(resp);
             }
         }
-        [HttpPost, Route("addInf")]
+        [HttpPost, Route("getListByTimeAndTop")]
+        /// <summary>
+        /// flag (time:按照时间查询 top:按照次数查询)
+        /// </summary>
+        public string GetListByTimeAndTop(VisitorSearchModel v)
+        {
+            string Time = DataHelper.IsNullReturnLine(v.Time);
+            string VCertificateNumber = DataHelper.IsNullReturnLine(v.VCertificateNumber);
+            string Top = DataHelper.IsNullReturnLine(v.Top);
+            string Flag = DataHelper.IsNullReturnLine(v.Flag);
+            string sql = "";
+            SqlParameter[] pms = null;
+            if (string.IsNullOrEmpty(VCertificateNumber))
+            {
+                return ConvertHelper.resultJson(0, "证件号不能为空");
+            }
+            if (Flag == "time")
+            {
+                if (string.IsNullOrEmpty(Time)) {
+                    return ConvertHelper.resultJson(0, "请选择时间");
+                }
+                string timeStart = Time.Split(' ')[0] + " 00:00:00";
+                string timeEnd = Time.Split(' ')[1] + " 23:59:59";
+                pms = new SqlParameter[]{
+                    new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                    new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                    new SqlParameter("@VCertificateNumber",SqlDbType.NVarChar){Value = (VCertificateNumber)}
+                };
+                sql += "select v.VId,v.VName,v.VSex,v.VNation,v.VBirthDate,v.VAddress,v.VIssuingAuthority,v.VExpiryDate,v.VCertificateType,v.VCertificateNumber,v.VType,v.VFromCourtId,v.VInTime,v.VOutTime,v.VInPost,v.VOutPost,v.VInDoorkeeper,v.VOutDoorkeeper,v.VVisitingReason,v.VIntervieweeDept,v.VInterviewee,v.VOffice,v.VOfficePhone,v.VExtensionPhone,v.VMobilePhone,v.VRemark,c.CName from T_VisitorAccessInf v ";
+                sql += "left join T_CourtInf c ";
+                sql += "on v.VFromCourtId = c.CNumber ";
+                sql += "where v.VInTime between @timeStart and @timeEnd ";
+                sql += "and v.VCertificateNumber=@VCertificateNumber ";
+                sql += "order by v.VId desc";
+            }
+            else if (Flag == "top")
+            {
+                if (string.IsNullOrEmpty(Top.ToString()))
+                {
+                    return ConvertHelper.resultJson(0, "次数不能为空");
+                }
+                pms = new SqlParameter[]{
+                    new SqlParameter("@Top",SqlDbType.Int){Value = (Convert.ToInt32(Top))},
+                    new SqlParameter("@VCertificateNumber",SqlDbType.NVarChar){Value = (VCertificateNumber)}
+                };
+                sql += "select top (@Top) v.VId,v.VName,v.VSex,v.VNation,v.VBirthDate,v.VAddress,v.VIssuingAuthority,v.VExpiryDate,v.VCertificateType,v.VCertificateNumber,v.VType,v.VFromCourtId,v.VInTime,v.VOutTime,v.VInPost,v.VOutPost,v.VInDoorkeeper,v.VOutDoorkeeper,v.VVisitingReason,v.VIntervieweeDept,v.VInterviewee,v.VOffice,v.VOfficePhone,v.VExtensionPhone,v.VMobilePhone,v.VRemark,c.CName from T_VisitorAccessInf v ";
+                sql += "left join T_CourtInf c ";
+                sql += "on v.VFromCourtId = c.CNumber ";
+                sql += "where v.VCertificateNumber=@VCertificateNumber ";
+                sql += "order by v.VId desc";
+            }
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+                //return ConvertHelper.DataTableToJson(dt);
+                //return dt;
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpGet, Route("getVTrackByCertificateNumber")]
+        /// <summary>
+        /// flag (time:按照时间查询 top:按照次数查询)
+        /// </summary>
+        public string GetVTrackByCertificateNumber(string VCertificateNumber)
+        {
+            if (string.IsNullOrEmpty(VCertificateNumber))
+            {
+                return ConvertHelper.resultJson(0, "证件号不能为空！");
+            }
+            string sql = "";
+            sql += "select v.VId,v.VInTime,c.CName ";
+            sql += "from T_VisitorAccessInf v ";
+            sql += "left join T_CourtInf c ";
+            sql += "on v.VFromCourtId = c.CNumber ";
+            sql += "where v.VCertificateNumber = @VCertificateNumber ";
+            sql += "order by v.VInTime desc";
+            SqlParameter[] pms = new SqlParameter[]{
+                    new SqlParameter("@VCertificateNumber",SqlDbType.NVarChar){Value=VCertificateNumber}
+            };
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+                //return ConvertHelper.DataTableToJson(dt);
+                //return dt;
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("addInf4WF")]
         public string AddInf(VisitorAccessInf v)
         {
             string wramStr = "";
@@ -260,26 +369,34 @@ namespace XXCWEBAPI.Controllers
         [HttpPost, Route("deleteInfById")]
         public string DeleteInfById(VisitorAccessInf v)
         {
-            //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
-            string sql = "delete from T_VisitorAccessInf where VId=@VId";
-            SqlParameter[] pms = new SqlParameter[]{
-                new SqlParameter("@VId",SqlDbType.Int){Value=v.VId}
-            };
-            try
+            if (v.Token == DataHelper.getToken())
             {
-                int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
-                return ConvertHelper.IntToJson(result);
-            }
-            catch (Exception e)
-            {
-                //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
-                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-                {
-                    Content = new StringContent(e.ToString()),
-                    ReasonPhrase = "error"
+                //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
+                string sql = "delete from T_VisitorAccessInf where VId=@VId";
+                SqlParameter[] pms = new SqlParameter[]{
+                    new SqlParameter("@VId",SqlDbType.Int){Value=v.VId}
                 };
-                throw new HttpResponseException(resp);
+                try
+                {
+                    int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
+                    return ConvertHelper.IntToJson(result);
+                }
+                catch (Exception e)
+                {
+                    //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
+                    var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    {
+                        Content = new StringContent(e.ToString()),
+                        ReasonPhrase = "error"
+                    };
+                    throw new HttpResponseException(resp);
+                }
             }
+            else
+            {
+                return ConvertHelper.resultJson(101, "权限受限！");
+            }
+            
         }
     }
 }

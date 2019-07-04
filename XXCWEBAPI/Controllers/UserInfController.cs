@@ -33,7 +33,8 @@ namespace XXCWEBAPI.Controllers
             try
             {
                 dt = SQLHelper.ExecuteDataTable(sql, CommandType.StoredProcedure, pms);
-                return "{\"code\":1,\"count\":" + pms[2].Value.ToString() + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+                string token = DataHelper.getToken();
+                return "{\"code\":1,\"count\":" + pms[2].Value.ToString() + ",\"Token\":\"" + token + "\",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
             }
             catch (Exception e)
             {
@@ -46,6 +47,100 @@ namespace XXCWEBAPI.Controllers
                 throw new HttpResponseException(resp);
             }
         }
+        [HttpPost, Route("editInf")]
+        public string EditInf(UserInf v)
+        {
+            if (v.Token == DataHelper.getToken())
+            {
+                string wramStr = "";
+                if (string.IsNullOrEmpty(v.OldPassword))
+                {
+                    wramStr = "旧密码不能为空";
+                    return ConvertHelper.resultJson(0, wramStr);
+                }
+                else if (string.IsNullOrEmpty(v.NewPassword))
+                {
+                    wramStr = "新密码不能为空";
+                    return ConvertHelper.resultJson(0, wramStr);
+                }
+                else
+                {
+                    string p = "";
+                    p += "UserName=" + v.UserName;
+                    p += "OldPassword=" + v.OldPassword;
+                    p += "NewPassword=" + v.NewPassword;
+
+                    string md5Ciphertext = v.MD5Ciphertext;//对方传过来的所有字段的MD5密文
+                    //把传过来的信息再次MD5加密，和所有字段的MD5密文进行比对，保证数据在传输过程中没被修改才允许添加到数据库
+                    string md5P = MD5Helper._md5(p);
+                    if (md5Ciphertext == md5P)
+                    {
+                        string oldPwd = AESHelper.AesDecrypt(v.OldPassword);
+                        string pwd = AESHelper.AesDecrypt(v.NewPassword);
+                        string username = AESHelper.AesDecrypt(v.UserName);
+
+                        string sql1 = "select count(*) from T_UserInf where UserName=@UserName and UPassword=@UPassword";
+                        SqlParameter[] pms1 = new SqlParameter[]{
+                            new SqlParameter("@UPassword",SqlDbType.NVarChar){Value = (oldPwd)},
+                            new SqlParameter("@UserName",SqlDbType.NVarChar){Value = (username)}
+                        };
+                        try
+                        {
+                            object c = SQLHelper.ExecuteScalar(sql1, System.Data.CommandType.Text, pms1);
+                            if (Convert.ToInt32(c) > 0)
+                            {
+                                string sql2 = "update T_UserInf set UPassword=@UPassword";
+                                sql2 += " where UserName=@UserName";
+                                SqlParameter[] pms2 = new SqlParameter[]{
+                                    new SqlParameter("@UPassword",SqlDbType.NVarChar){Value=pwd},
+                                    new SqlParameter("@UserName",SqlDbType.NVarChar){Value=username}
+                                };
+                                try
+                                {
+                                    int result = SQLHelper.ExecuteNonQuery(sql2, System.Data.CommandType.Text, pms2);
+                                    return ConvertHelper.IntToJson(result);
+                                }
+                                catch (Exception e)
+                                {
+                                    //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
+                                    var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                                    {
+                                        Content = new StringContent(e.ToString()),
+                                        ReasonPhrase = "error"
+                                    };
+                                    throw new HttpResponseException(resp);
+                                }
+                            }
+                            else {
+                                return ConvertHelper.resultJson(0, "旧密码不正确！");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            //在webapi中要想抛出异常必须这样抛出，否则之抛出一个默认500的异常
+                            var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                            {
+                                Content = new StringContent(e.ToString()),
+                                ReasonPhrase = "error"
+                            };
+                            throw new HttpResponseException(resp);
+                        }
+                        //string sql = "insert into T_VisitorAccessInf(VName, VSex, VNation, VBirthDate, VAddress, VIssuingAuthority, VExpiryDate, VCertificatePhoto, VLocalePhoto, VCertificateType, VCertificateNumber, VType, VFromCourtId, VInTime, VOutTime, VInPost, VOutPost, VInDoorkeeper, VOutDoorkeeper, VVisitingReason, VIntervieweeDept, VInterviewee, VOffice, VOfficePhone, VExtensionPhone, VMobilePhone, VRemark) values(@VName, @VSex, @VNation, @VBirthDate, @VAddress, @VIssuingAuthority, @VExpiryDate, @VCertificatePhoto, @VLocalePhoto, @VCertificateType, @VCertificateNumber, @VType, @VFromCourtId, @VInTime, @VOutTime, @VInPost, @VOutPost, @VInDoorkeeper, @VOutDoorkeeper, @VVisitingReason, @VIntervieweeDept, @VInterviewee, @VOffice, @VOfficePhone, @VExtensionPhone, @VMobilePhone, @VRemark)";
+                        
+                    }
+                    else
+                    {
+                        return ConvertHelper.resultJson(0, "数据在传输过程中被篡改！");
+                    }
+                }
+            }
+            else
+            {
+                return ConvertHelper.resultJson(0, "权限受限！");
+            }
+
+        }
+
         [HttpGet, Route("getListByMore")]
         public string GetListByMore(string UserName, int pageSize, int pageIndex)
         {

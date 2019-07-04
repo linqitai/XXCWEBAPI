@@ -13,6 +13,14 @@ namespace XXCWEBAPI
 {
     public class WebApiApplication : System.Web.HttpApplication
     {
+        /// <summary>
+        /// 开启WebAPI中的Session支持
+        /// </summary>
+        public override void Init()
+        {
+            this.PostAuthenticateRequest += (sender, e) => HttpContext.Current.SetSessionStateBehavior(SessionStateBehavior.Required);
+            base.Init();
+        }
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();

@@ -86,9 +86,9 @@ namespace XXCWEBAPI.Utils
         /// <returns></returns>
         public static string resultJson(int status,string msg)
         {
-            string code = status == 0 ? statusError : statusOK;
+            string code = status.ToString();
             StringBuilder jsonBuilder = new StringBuilder();
-            jsonBuilder.Append("{\"code\":\"" + code + "\",msg:\""+ msg +"\"}");
+            jsonBuilder.Append("{\"code\":\"" + code + "\",\"msg\":\""+ msg +"\"}");
             return jsonBuilder.ToString();
         }
         #region 将List<>转换为Json

@@ -10,6 +10,13 @@ namespace XXCWEBAPI.Utils
     public static class DataHelper
     {
         /// <summary>
+        /// 返回Token
+        /// </summary>
+        public static string getToken()
+        {
+            return AESHelper.AesEncrypt(DateTime.Now.ToString("yyyy-MM-dd"));
+        }
+        /// <summary>
         /// 判断该字段是否为空，空则返回""
         /// </summary>
         /// <param name="str">str</param>

@@ -69,5 +69,41 @@ namespace XXCWEBAPI.Models
             set { _URealName = value; }
             get { return _URealName; }
         }
+        private string _MD5Ciphertext;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string MD5Ciphertext
+        {
+            set { _MD5Ciphertext = value; }
+            get { return _MD5Ciphertext; }
+        }
+        private string _token;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Token
+        {
+            set { _token = value; }
+            get { return _token; }
+        }
+        private string _OldPassword;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string OldPassword
+        {
+            set { _OldPassword = value; }
+            get { return _OldPassword; }
+        }
+        private string _NewPassword;
+        /// <summary>
+        /// 
+        /// </summary>
+        public string NewPassword
+        {
+            set { _NewPassword = value; }
+            get { return _NewPassword; }
+        }
     }
 }
