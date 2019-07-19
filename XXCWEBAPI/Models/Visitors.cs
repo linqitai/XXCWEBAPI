@@ -95,12 +95,6 @@ namespace XXCWEBAPI.Models
             set { _Type = value; }
             get { return _Type; }
         }
-		private int? _StaffId;
-        public int? StaffId
-        {
-            set { _StaffId = value; }
-            get { return _StaffId; }
-        }
 		private string _CreateTime;
 		public string CreateTime
         { 
@@ -112,30 +106,6 @@ namespace XXCWEBAPI.Models
         { 
             set { _DataTime = value; }
             get { return _DataTime; }
-        }
-		private string _InvitorName;
-		public string InvitorName
-        { 
-            set { _InvitorName = value; }
-            get { return _InvitorName; }
-        }
-		private string _InvitorSex;
-		public string InvitorSex
-        { 
-            set { _InvitorSex = value; }
-            get { return _InvitorSex; }
-        }
-		private string _InvitorDuty;
-		public string InvitorDuty
-        { 
-            set { _InvitorDuty = value; }
-            get { return _InvitorDuty; }
-        }
-		private string _InvitorDep;
-		public string InvitorDep
-        { 
-            set { _InvitorDep = value; }
-            get { return _InvitorDep; }
         }
 		private string _Checker;
 		public string Checker
@@ -154,6 +124,30 @@ namespace XXCWEBAPI.Models
         { 
             set { _CheckStatus = value; }
             get { return _CheckStatus; }
+        }
+        private string _SNo;
+        public string SNo
+        {
+            set { _SNo = value; }
+            get { return _SNo; }
+        }
+        private string _OpenId;
+        public string OpenId
+        {
+            set { _OpenId = value; }
+            get { return _OpenId; }
+        }
+        private string _EnterCode;
+        public string EnterCode
+        {
+            set { _EnterCode = value; }
+            get { return _EnterCode; }
+        }
+        private string _IsUseEC;
+        public string IsUseEC
+        {
+            set { _IsUseEC = value; }
+            get { return _IsUseEC; }
         }
 	}
 }

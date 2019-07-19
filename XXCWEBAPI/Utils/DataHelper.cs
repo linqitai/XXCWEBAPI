@@ -24,7 +24,7 @@ namespace XXCWEBAPI.Utils
         /// <returns></returns>
         public static string IsNullReturnLine(string str,bool dealSpace=false)
         {
-            if (string.IsNullOrEmpty(str))
+            if (string.IsNullOrEmpty(str)||str=="null")
             {
                 return "";
             }

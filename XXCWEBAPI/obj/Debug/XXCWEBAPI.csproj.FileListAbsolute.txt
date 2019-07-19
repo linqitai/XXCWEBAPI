@@ -41,7 +41,6 @@ D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.dll
 D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.pdb
 D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\bin\BouncyCastle.Crypto.dll
 D:\CSharp\code\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.csprojResolveAssemblyReference.cache
-F:\code\C#\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.csprojResolveAssemblyReference.cache
 F:\code\C#\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.dll
 F:\code\C#\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.pdb
 F:\code\C#\XXCWEBAPI\XXCWEBAPI\bin\XXCWEBAPI.dll.config
@@ -83,3 +82,4 @@ F:\code\C#\XXCWEBAPI\XXCWEBAPI\bin\zh-Hans\System.Web.Razor.resources.dll
 F:\code\C#\XXCWEBAPI\XXCWEBAPI\bin\zh-Hans\System.Web.WebPages.resources.dll
 F:\code\C#\XXCWEBAPI\XXCWEBAPI\bin\zh-Hans\System.Web.WebPages.Deployment.resources.dll
 F:\code\C#\XXCWEBAPI\XXCWEBAPI\bin\zh-Hans\System.Web.WebPages.Razor.resources.dll
+F:\code\C#\XXCWEBAPI\XXCWEBAPI\obj\Debug\XXCWEBAPI.csprojResolveAssemblyReference.cache

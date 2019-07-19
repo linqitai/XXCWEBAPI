@@ -154,6 +154,7 @@
     <Compile Include="Models\LawyerInf.cs" />
     <Compile Include="Models\UserInf.cs" />
     <Compile Include="Models\VisitorAccessInf.cs" />
+    <Compile Include="Models\WXUserInfo.cs" />
     <Compile Include="Models\VisitorsSearchModel.cs" />
     <Compile Include="Models\VisitorSearchModel.cs" />
     <Compile Include="Models\Visitors.cs" />
@@ -161,6 +162,7 @@
     <Compile Include="Utils\AESHelper.cs" />
     <Compile Include="Utils\ConvertHelper.cs" />
     <Compile Include="Utils\DataHelper.cs" />
+    <Compile Include="Utils\HttpHelper.cs" />
     <Compile Include="Utils\MD5Helper.cs" />
     <Compile Include="Utils\RSAHelper.cs" />
     <Compile Include="Utils\SQLHelper.cs" />

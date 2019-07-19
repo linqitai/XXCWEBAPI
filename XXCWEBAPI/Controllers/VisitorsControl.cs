@@ -19,6 +19,8 @@ namespace XXCWEBAPI.Controllers
     [RoutePrefix("api/visitors")]
     public class VisitorsController : ApiController
     {
+        public string AppId = ConfigurationManager.AppSettings["AppId"];
+        public string AppSecret = ConfigurationManager.AppSettings["AppSecret"];
         [HttpGet, Route("testLink")]
         public string TestLink()
         {
@@ -26,9 +28,479 @@ namespace XXCWEBAPI.Controllers
             return ConvertHelper.resultJson(1, result);
             //return mssqlserver;
         }
+        [HttpPost, Route("addWXUserInfo")]
+        public string AddWXUserInfo(WXUserInfo v)
+        {
+            string sql = "select count(*) from XXCLOUDVisitor.dbo.Table_WXUserInfo where OpenId = @OpenId";
+            object obj;
+            SqlParameter[] pms = new SqlParameter[]{
+                new SqlParameter("@OpenId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.OpenId)}
+            };
+            try
+            {
+                obj = SQLHelper.ExecuteScalar(sql, System.Data.CommandType.Text, pms);
+                if (Convert.ToInt32(obj) == 1)
+                {
+                    return ConvertHelper.resultJson(1, "数据库中已经存在此数据");
+                }
+                else if (Convert.ToInt32(obj) == 0)
+                {
+                    //return ConvertHelper.resultJson(0, "数据库中不存在此数据");
+                    string sql2 = "insert into XXCLOUDVisitor.dbo.Table_WXUserInfo(NickName, Gender, City, Province, AvatarUrl, OpenId)" +
+                "values(@NickName, @Gender, @City, @Province, @AvatarUrl, @OpenId)";
+                    DateTime dt = DateTime.Now;
+                    SqlParameter[] pms2 = new SqlParameter[]{
+                        new SqlParameter("@NickName",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.NickName)},
+                        new SqlParameter("@Gender",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Gender)},
+                        new SqlParameter("@City",SqlDbType.NVarChar){Value= DataHelper.IsNullReturnLine(v.City)},
+                        new SqlParameter("@Province",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Province)},
+                        new SqlParameter("@AvatarUrl",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.AvatarUrl)},
+                        new SqlParameter("@OpenId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.OpenId)},
+                        new SqlParameter("@CreateTime",SqlDbType.NVarChar){Value=dt.ToString("yyyy-MM-dd hh:mm:ss")}
+                    };
+                    try
+                    {
+                        int result = SQLHelper.ExecuteNonQuery(sql2, System.Data.CommandType.Text, pms2);
+                        return ConvertHelper.IntToJson(result);
+                    }
+                    catch (Exception e)
+                    {
+                        //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                        var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                        {
+                            Content = new StringContent(e.ToString()),
+                            ReasonPhrase = "error"
+                        };
+                        throw new HttpResponseException(resp);
+                    }
+                }
+                return ConvertHelper.resultJson(0, "系统出错了");
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("haveUserInfo")]
+        public string HaveUserInfo(WXUserInfo v)
+        {
+            string sql = "select count(*) from XXCLOUDVisitor.dbo.Table_WXUserInfo where OpenId = @OpenId";
+            object obj;
+            SqlParameter[] pms = new SqlParameter[]{
+                    new SqlParameter("@OpenId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.OpenId)}
+                };
+            try
+            {
+                obj = SQLHelper.ExecuteScalar(sql, System.Data.CommandType.Text, pms);
+                if (Convert.ToInt32(obj) == 1)
+                {
+                    return ConvertHelper.resultJson(1, "数据库中已经存在此数据");
+                }
+                else {
+                    return ConvertHelper.resultJson(0, "数据库中不存在此数据");
+                }
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("getOpenIdByCode")]
+        public string GetOpenIdByCode(VisitorsSearchModel v)
+        {
+            if (v.js_code != "" && v.js_code != null)
+            {
+                //string url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + AppId + "&secret=" + AppSecret + "&js_code=" + v.Code + "&grant_type=authorization_code";
+                string url = "https://api.weixin.qq.com/sns/jscode2session";
+                string p="";
+                p = "appid=" + v.appid + "&secret=" + v.secret + "&js_code=" + v.js_code + "&grant_type=" + v.grant_type;
+                string result = HttpHelper.HttpPost(url, p);
+                return ConvertHelper.resultJson(0, result);
+            }
+            return ConvertHelper.resultJson(0, "系统出错了");
+        }
+        [HttpPost, Route("check")]
+        public string Check(VisitorsSearchModel v)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            DateTime dt = DateTime.Now;
+            int RandKey=1000;
+
+            //new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+            //string sql_str = 
+            if (v.CheckStatus == "1")
+            {
+                bool is_ec_ok = false;
+                while (!is_ec_ok) {
+                    Random ran = new Random();
+                    RandKey = ran.Next(1000, 9999);
+
+                    string sqlIsExistEC = "select count(*) from XXCLOUDVisitor.dbo.Table_Visitors where EnterCode=@EnterCode";
+                        SqlParameter[] pms4EC = new SqlParameter[]{
+                        new SqlParameter("@EnterCode",SqlDbType.NVarChar){Value = RandKey.ToString()}
+                    };
+                    object obj = SQLHelper.ExecuteScalar(sqlIsExistEC, System.Data.CommandType.Text, pms4EC);
+                    if (Convert.ToInt32(obj) == 0)
+                    { //说明此EnterCode已经存在
+                        is_ec_ok = true;
+                    }
+                }
+                pms = new SqlParameter[]{
+                    new SqlParameter("@Id",SqlDbType.Int){Value = (v.Id)},
+                    new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)},
+                    new SqlParameter("@Checker",SqlDbType.NVarChar){Value = (v.Checker)},
+                    new SqlParameter("@CheckDate",SqlDbType.NVarChar){Value = dt.ToString("yyyy-MM-dd")},
+                    new SqlParameter("@EnterCode",SqlDbType.NVarChar){Value = RandKey.ToString()}
+                };
+                sql = "update XXCLOUDVisitor.dbo.Table_Visitors set CheckStatus=@CheckStatus,Checker=@Checker,CheckDate=@CheckDate,EnterCode=@EnterCode where Id=@Id";
+            }
+            else {
+                pms = new SqlParameter[]{
+                    new SqlParameter("@Id",SqlDbType.Int){Value = (v.Id)},
+                    new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)},
+                    new SqlParameter("@Checker",SqlDbType.NVarChar){Value = (v.Checker)},
+                    new SqlParameter("@CheckDate",SqlDbType.NVarChar){Value = dt.ToString("yyyy-MM-dd")}
+                };
+                sql = "update XXCLOUDVisitor.dbo.Table_Visitors set CheckStatus=@CheckStatus,Checker=@Checker,CheckDate=@CheckDate where Id=@Id";
+            }
+            
+            try
+            {
+                int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
+                return ConvertHelper.IntToJson(result);
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("updatePassword")]
+        public string UpdatePassword(VisitorsSearchModel v)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            int result;
+            object obj;
+            pms = new SqlParameter[]{
+                new SqlParameter("@Id",SqlDbType.Int){Value = (v.Id)},
+                new SqlParameter("@SMPhone",SqlDbType.NVarChar){Value = (v.SMPhone)},
+                new SqlParameter("@SInitialPassword",SqlDbType.NVarChar){Value = (v.SInitialPassword)},
+                new SqlParameter("@NewPassword",SqlDbType.NVarChar){Value = (v.NewPassword)}
+            };
+            //核实密码
+            sql = "select count(*) from XXCLOUD.dbo.T_StaffInf where Id=@Id and SMPhone=@SMPhone and SInitialPassword=@SInitialPassword";
+            obj = SQLHelper.ExecuteScalar(sql, System.Data.CommandType.Text, pms);
+            if (Convert.ToInt32(obj) == 1)
+            {
+                SqlParameter[] pms2 = new SqlParameter[]{
+                    new SqlParameter("@Id",SqlDbType.Int){Value = (v.Id)},
+                    new SqlParameter("@NewPassword",SqlDbType.NVarChar){Value = (v.NewPassword)}
+                };
+                // 修改密码
+                string sql2 = "update XXCLOUD.dbo.T_StaffInf set SInitialPassword=@NewPassword where Id=@Id";
+                try
+                {
+                    result = SQLHelper.ExecuteNonQuery(sql2, System.Data.CommandType.Text, pms2);
+                    return ConvertHelper.IntToJson(result);
+                }
+                catch (Exception e)
+                {
+                    //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                    var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                    {
+                        Content = new StringContent(e.ToString()),
+                        ReasonPhrase = "error"
+                    };
+                    throw new HttpResponseException(resp);
+                }
+            }
+            else {
+                return "{\"code\":0,\"msg\":" + "旧密码错误" + "}";
+            }
+        }
+        [HttpGet, Route("login")]
+        public string Login(string SMPhone, string SInitialPassword)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            pms = new SqlParameter[]{
+                new SqlParameter("@SMPhone",SqlDbType.NVarChar){Value = (SMPhone)},
+                new SqlParameter("@SInitialPassword",SqlDbType.NVarChar){Value = (SInitialPassword)}
+            };
+
+            //new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+            //string sql_str = 
+            sql = "select count(*) from XXCLOUD.dbo.T_StaffInf where SMPhone=@SMPhone and SInitialPassword=@SInitialPassword";
+            DataTable dt;
+            object obj;
+            try
+            {
+                // 先用count(*)
+                obj = SQLHelper.ExecuteScalar(sql, CommandType.Text, pms);
+                if (Convert.ToInt32(obj) == 1) {
+                    //if count(*)==1 在获取userinfo
+                    string sql2 = "select * from XXCLOUD.dbo.T_StaffInf where SMPhone=@SMPhone and SInitialPassword=@SInitialPassword";
+                    SqlParameter[] pms2 = null;
+                    pms2 = new SqlParameter[]{
+                        new SqlParameter("@SMPhone",SqlDbType.NVarChar){Value = (SMPhone)},
+                        new SqlParameter("@SInitialPassword",SqlDbType.NVarChar){Value = (SInitialPassword)}
+                    };
+                    dt = SQLHelper.ExecuteDataTable(sql2, CommandType.Text, pms2);
+                    return "{\"code\":1,\"count\":" + dt.Rows.Count + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+                }
+                else {
+                    return ConvertHelper.resultJson(0, "账号或密码错误！");
+                }
+                
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpGet, Route("getStaffInfoByName")]
+        public string GetStaffInfoByName(string SName)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            pms = new SqlParameter[]{
+                new SqlParameter("@SName",SqlDbType.NVarChar){Value = (SName)}
+            };
+
+            //new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+            //string sql_str = 
+            sql = "select * from XXCLOUD.dbo.T_StaffInf where SName = @SName";
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"count\":" + dt.Rows.Count + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpGet, Route("getStaffInfoByPhone")]
+        public string GetStaffInfoByPhone(string SMPhone)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            pms = new SqlParameter[]{
+                new SqlParameter("@SMPhone",SqlDbType.NVarChar){Value = (SMPhone)}
+            };
+
+            //new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+            //string sql_str = 
+            sql = "select * from XXCLOUD.dbo.T_StaffInf where SMPhone = @SMPhone";
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"count\":" + dt.Rows.Count + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("getListByNameOrPhone")]
+        /// <summary>
+        /// 
+        /// </summary>
+        public string GetListByNameOrPhone(VisitorsSearchModel v)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+
+            if (v.Type == "check")
+            {
+                if (!string.IsNullOrEmpty(v.Name) && string.IsNullOrEmpty(v.Phone))
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@Name",SqlDbType.NVarChar){Value = (v.Name)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where Name = @Name and CheckStatus=@CheckStatus";
+                }
+                else if (string.IsNullOrEmpty(v.Name) && !string.IsNullOrEmpty(v.Phone))
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where Phone = @Phone and CheckStatus=@CheckStatus";
+                }
+                else if (!string.IsNullOrEmpty(v.Name) && !string.IsNullOrEmpty(v.Phone))
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@Name",SqlDbType.NVarChar){Value = (v.Name)},
+                        new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where Name = @Name and Phone = @Phone and CheckStatus=@CheckStatus";
+                }
+                else {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where CheckStatus=@CheckStatus";
+                }
+            }
+
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"count\":" + dt.Rows.Count + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("getListByNameOrPhone4Checked")]
+        /// <summary>
+        /// 
+        /// </summary>
+        public string GetListByNameOrPhone4Checked(VisitorsSearchModel v)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            string timeStart = v.StartDate;
+            string timeEnd = v.EndDate;
+            if (v.Type == "check")
+            {
+                if (!string.IsNullOrEmpty(v.Name) && string.IsNullOrEmpty(v.Phone))
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                        new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                        new SqlParameter("@Name",SqlDbType.NVarChar){Value = (v.Name)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where Name = @Name and CheckStatus in ('1','-1') and CheckDate between @timeStart and @timeEnd";
+                }
+                else if (string.IsNullOrEmpty(v.Name) && !string.IsNullOrEmpty(v.Phone))
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                        new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                        new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where Phone = @Phone and CheckStatus in ('1','-1') and CheckDate between @timeStart and @timeEnd";
+                }
+                else if (!string.IsNullOrEmpty(v.Name) && !string.IsNullOrEmpty(v.Phone))
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                        new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                        new SqlParameter("@Name",SqlDbType.NVarChar){Value = (v.Name)},
+                        new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where Name = @Name and Phone = @Phone and CheckStatus in ('1','-1') and CheckDate between @timeStart and @timeEnd";
+                }
+                else
+                {
+                    pms = new SqlParameter[]{
+                        new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                        new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                        new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value = (v.CheckStatus)}
+                    };
+                    sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                    sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                    sql += " on V.SNo = S.SNo";
+                    sql += " where CheckStatus in ('1','-1') and CheckDate between @timeStart and @timeEnd";
+                }
+            }
+
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"count\":" + dt.Rows.Count + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
+        }
+
         [HttpPost, Route("getListByTime")]
         /// <summary>
-        /// flag (time:按照时间查询 top:按照次数查询)
+        /// 
         /// </summary>
         public string GetListByTime(VisitorsSearchModel v)
         {
@@ -44,14 +516,41 @@ namespace XXCWEBAPI.Controllers
             SqlParameter[] pms = null;
             string timeStart = v.StartDate + " 00:00:01";
             string timeEnd = v.EndDate + " 23:59:59";
-            pms = new SqlParameter[]{
-                new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
-                new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)}
-            };
+
+            if (v.Type == "in")
+            {
+                pms = new SqlParameter[]{
+                    new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                    new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                    new SqlParameter("@SMPhone",SqlDbType.NVarChar){Value = (v.Phone)}
+                };
+                sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                sql += " on V.SNo = S.SNo";
+                sql += " where CreateTime between @timeStart and @timeEnd and SMPhone = @Phone";
+            }
+            else if (v.Type == "out")
+            {
+                pms = new SqlParameter[]{
+                    new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                    new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                    new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)}
+                };
+                sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                sql += " on V.SNo = S.SNo";
+                sql += " where CreateTime between @timeStart and @timeEnd and Phone = @Phone";
+            }
+
+            //pms = new SqlParameter[]{
+            //    new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+            //    new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)}
+            //};
             
-            //new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
-            //string sql_str = 
-            sql = "select * from XXCLOUDVisitor.dbo.Table_Visitors where CreateTime between @timeStart and @timeEnd";
+            //sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+            //sql += " left join XXCLOUD.dbo.T_StaffInf S";
+            //sql += " on V.SNo = S.SNo";
+            //sql += " where CreateTime between @timeStart and @timeEnd";
             DataTable dt;
             try
             {
@@ -67,6 +566,44 @@ namespace XXCWEBAPI.Controllers
                     ReasonPhrase = "error"
                 };
                  throw new HttpResponseException(resp);
+            }
+        }
+        [HttpPost, Route("getListByTimeAndOpenId")]
+        /// <summary>
+        /// flag (time:按照时间查询 top:按照次数查询)
+        /// </summary>
+        public string GetListByTimeAndOpenId(VisitorsSearchModel v)
+        {
+            string sql = "";
+            SqlParameter[] pms = null;
+            string timeStart = v.StartDate + " 00:00:01";
+            string timeEnd = v.EndDate + " 23:59:59";
+            pms = new SqlParameter[]{
+                new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                new SqlParameter("@OpenId",SqlDbType.NVarChar){Value = (v.OpenId)}
+            };
+            sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+            sql += " left join XXCLOUD.dbo.T_StaffInf S";
+            sql += " on V.SNo = S.SNo";
+            sql += " where CreateTime between @timeStart and @timeEnd and V.OpenId = @OpenId";
+            
+
+            DataTable dt;
+            try
+            {
+                dt = SQLHelper.ExecuteDataTable(sql, CommandType.Text, pms);
+                return "{\"code\":1,\"count\":" + dt.Rows.Count + ",\"data\":" + ConvertHelper.DataTableToJson(dt) + "}";
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
             }
         }
         [HttpPost, Route("getListByTimeAndPhone")]
@@ -87,15 +624,35 @@ namespace XXCWEBAPI.Controllers
             SqlParameter[] pms = null;
             string timeStart = v.StartDate + " 00:00:01";
             string timeEnd = v.EndDate + " 23:59:59";
-            pms = new SqlParameter[]{
-                new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
-                new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
-                new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)}
-            };
+            if (v.Type == "in")
+            {
+                pms = new SqlParameter[]{
+                    new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                    new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                    new SqlParameter("@SMPhone",SqlDbType.NVarChar){Value = (v.Phone)}
+                };
+                sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                sql += " on V.SNo = S.SNo";
+                sql += " where CreateTime between @timeStart and @timeEnd and SMPhone = @SMPhone";
+            }
+            else if(v.Type=="out"){
+                pms = new SqlParameter[]{
+                    new SqlParameter("@timeStart",SqlDbType.NVarChar){Value = (timeStart)},
+                    new SqlParameter("@timeEnd",SqlDbType.NVarChar){Value = (timeEnd)},
+                    new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)}
+                };
+                sql += " select * from XXCLOUDVisitor.dbo.Table_Visitors V";
+                sql += " left join XXCLOUD.dbo.T_StaffInf S";
+                sql += " on V.SNo = S.SNo";
+                sql += " where CreateTime between @timeStart and @timeEnd and Phone = @Phone";
+            }
+            
 
             //new SqlParameter("@Phone",SqlDbType.NVarChar){Value = (v.Phone)},
             //string sql_str = 
-            sql = "select * from XXCLOUDVisitor.dbo.Table_Visitors where CreateTime between @timeStart and @timeEnd and Phone = @Phone";
+            //sql = "select * from XXCLOUDVisitor.dbo.Table_Visitors where CreateTime between @timeStart and @timeEnd and Phone = @Phone";
+            
             DataTable dt;
             try
             {
@@ -113,8 +670,8 @@ namespace XXCWEBAPI.Controllers
                 throw new HttpResponseException(resp);
             }
         }
-        [HttpPost, Route("add")]
-        public string Add(Visitors v)
+        [HttpPost, Route("add4Out")]
+        public string Add4Out(Visitors v)
         {
             string wramStr = "";
             if (string.IsNullOrEmpty(v.Name))
@@ -132,8 +689,8 @@ namespace XXCWEBAPI.Controllers
                 wramStr = "证件号不能为空";
                 return ConvertHelper.resultJson(0, wramStr);
             }
-            string sql = "insert into XXCLOUDVisitor.dbo.Table_Visitors(Name, Sex, Phone, IdentityNumber, Reason, Number, PlateNumber, Unit, Date, StartTime, EndTime, Remark, Type, CreateTime)" +
-                "values(@Name, @Sex, @Phone, @IdentityNumber, @Reason, @Number, @PlateNumber, @Unit, @Date, @StartTime,@EndTime, @Remark, @Type, @CreateTime)";
+            string sql = "insert into XXCLOUDVisitor.dbo.Table_Visitors(Name, Sex, Phone, IdentityNumber, Reason, Number, PlateNumber, Unit, Date, StartTime, EndTime, Remark, Type, CreateTime, SNo, OpenId)" +
+                "values(@Name, @Sex, @Phone, @IdentityNumber, @Reason, @Number, @PlateNumber, @Unit, @Date, @StartTime,@EndTime, @Remark, @Type, @CreateTime, @SNo, @OpenId)";
                 DateTime dt = DateTime.Now;
                 SqlParameter[] pms = new SqlParameter[]{
                     new SqlParameter("@Name",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Name)},
@@ -148,8 +705,10 @@ namespace XXCWEBAPI.Controllers
                     new SqlParameter("@StartTime",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.StartTime)},
                     new SqlParameter("@EndTime",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.EndTime)},
                     new SqlParameter("@Remark",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Remark)},
-                    new SqlParameter("@Type",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Type)},
-                    new SqlParameter("@CreateTime",SqlDbType.NVarChar){Value=dt.ToString("yyyy-MM-dd")}
+                    new SqlParameter("@Type",SqlDbType.NVarChar){Value="out"},
+                    new SqlParameter("@CreateTime",SqlDbType.NVarChar){Value=dt.ToString("yyyy-MM-dd hh:mm:ss")},
+                    new SqlParameter("@SNo",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.SNo)},
+                    new SqlParameter("@OpenId",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.OpenId)}
                 };
                 try
                 {
@@ -166,6 +725,64 @@ namespace XXCWEBAPI.Controllers
                     };
                     throw new HttpResponseException(resp);
                 }
+        }
+        [HttpPost, Route("add4In")]
+        public string Add4In(Visitors v)
+        {
+            string wramStr = "";
+            if (string.IsNullOrEmpty(v.Name))
+            {
+                wramStr = "访客姓名不能为空";
+                return ConvertHelper.resultJson(0, wramStr);
+            }
+            if (string.IsNullOrEmpty(v.Phone))
+            {
+                wramStr = "联系电话不能为空";
+                return ConvertHelper.resultJson(0, wramStr);
+            }
+            if (string.IsNullOrEmpty(v.IdentityNumber))
+            {
+                wramStr = "证件号不能为空";
+                return ConvertHelper.resultJson(0, wramStr);
+            }
+            string sql = "insert into XXCLOUDVisitor.dbo.Table_Visitors(Name, Sex, Phone, IdentityNumber, Reason, Number, PlateNumber, Unit, Date, StartTime, EndTime, Remark, Type, CreateTime, Checker, CheckDate, CheckStatus,SNo)" +
+                "values(@Name, @Sex, @Phone, @IdentityNumber, @Reason, @Number, @PlateNumber, @Unit, @Date, @StartTime,@EndTime, @Remark, @Type, @CreateTime, @Checker, @CheckDate, @CheckStatus, @SNo)";
+            DateTime dt = DateTime.Now;
+            SqlParameter[] pms = new SqlParameter[]{
+                    new SqlParameter("@Name",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Name)},
+                    new SqlParameter("@Sex",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Sex)},
+                    new SqlParameter("@Phone",SqlDbType.NVarChar){Value= DataHelper.IsNullReturnLine(v.Phone)},
+                    new SqlParameter("@IdentityNumber",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.IdentityNumber)},
+                    new SqlParameter("@Reason",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Reason)},
+                    new SqlParameter("@Number",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Number)},
+                    new SqlParameter("@PlateNumber",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.PlateNumber)},
+                    new SqlParameter("@Unit",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Unit)},
+                    new SqlParameter("@Date",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Date)},
+                    new SqlParameter("@StartTime",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.StartTime)},
+                    new SqlParameter("@EndTime",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.EndTime)},
+                    new SqlParameter("@Remark",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Remark)},
+                    new SqlParameter("@Type",SqlDbType.NVarChar){Value="in"},
+                    new SqlParameter("@CreateTime",SqlDbType.NVarChar){Value=dt.ToString("yyyy-MM-dd hh:mm:ss")},
+                    new SqlParameter("@Checker",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.Checker)},
+                    new SqlParameter("@CheckDate",SqlDbType.NVarChar){Value=dt.ToString("yyyy-MM-dd")},
+                    new SqlParameter("@CheckStatus",SqlDbType.NVarChar){Value=1},
+                    new SqlParameter("@SNo",SqlDbType.NVarChar){Value=DataHelper.IsNullReturnLine(v.SNo)}
+                };
+            try
+            {
+                int result = SQLHelper.ExecuteNonQuery(sql, System.Data.CommandType.Text, pms);
+                return ConvertHelper.IntToJson(result);
+            }
+            catch (Exception e)
+            {
+                //在webapi中要想抛出异常必须这样抛出，否则只抛出一个默认500的异常
+                var resp = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.ToString()),
+                    ReasonPhrase = "error"
+                };
+                throw new HttpResponseException(resp);
+            }
         }
     }
 }
